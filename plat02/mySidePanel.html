@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PlatformIO Sender</title>
+    <style>
+        /* Minimal and simple inline CSS style to ensure visibility and basic layout */
+        body { font-family: sans-serif; padding: 10px; }
+        textarea { width: 95%; height: 200px; margin-bottom: 10px; border: 1px solid #ccc; padding: 5px; }
+        button { padding: 10px 15px; background-color: #007ACC; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        #myStatusMessage { margin-top: 10px; padding: 8px; background-color: #f0f0f0; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h3 style="color: #007ACC;">Arduino Code Sender</h3>
+    <textarea id="myArduinoCode" placeholder="void setup() { ... }"></textarea>
+    
+    <button onclick="mySendCodeToPlatformIO()">Compile & Flash</button>
+    
+    <div id="myStatusMessage">Ready.</div>
+
+    <script>
+        // mySidePanel.js (Embedded)
+
+        // The URL for the local server bridge (this server must be running)
+        const myLocalServerUrl = "http://localhost:8080/compile-flash";
+
+        // Descriptive, camelCase variable for the textarea element
+        const myCodeElement = document.getElementById("myArduinoCode");
+        const myStatusElement = document.getElementById("myStatusMessage");
+
+        // The main function for sending the code
+        async function mySendCodeToPlatformIO() {
+            const myCode = myCodeElement.value;
+            
+            // Basic validation
+            if (!myCode.trim()) {
+                myUpdateStatus("Please enter Arduino code.", "red");
+                return;
+            }
+
+            myUpdateStatus("Sending code to local PlatformIO bridge...", "orange");
+
+            try {
+                // The Fetch API is used to send the data to the local bridge
+                const myResponse = await fetch(myLocalServerUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code: myCode, board: 'uno' }) // 'uno' is an example board
+                });
+
+                if (myResponse.ok) {
+                    const myResult = await myResponse.json();
+                    myUpdateStatus("Success! " + (myResult.message || "PlatformIO command sent."), "green");
+                } else {
+                    const myErrorText = await myResponse.text();
+                    myUpdateStatus(`Error from bridge (${myResponse.status}): ${myErrorText}`, "red");
+                }
+            } catch (myError) {
+                // This catches connection errors (e.g., if the local server is not running)
+                myUpdateStatus(`Connection Error: Local server bridge at ${myLocalServerUrl} is not reachable.`, "red");
+                console.error("Fetch Error:", myError);
+            }
+        }
+
+        // Helper function to update the status text and color
+        function myUpdateStatus(myMessage, myColor = "black") {
+            myStatusElement.textContent = myMessage;
+            myStatusElement.style.color = myColor;
+        }
+
+        // Example code to pre-fill the textarea
+        myCodeElement.value = `void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(1000);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(1000);
+}`;
+        
+    </script>
+</body>
+</html>
