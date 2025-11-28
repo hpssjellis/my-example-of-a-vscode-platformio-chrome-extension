@@ -3,15 +3,24 @@
 <head>
     <title>PlatformIO Sender</title>
     <style>
-        /* Minimal and simple inline CSS style to ensure visibility and basic layout */
         body { font-family: sans-serif; padding: 10px; }
         textarea { width: 95%; height: 200px; margin-bottom: 10px; border: 1px solid #ccc; padding: 5px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select { padding: 8px; margin-bottom: 10px; width: 98%; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 10px 15px; background-color: #007ACC; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        #myStatusMessage { margin-top: 10px; padding: 8px; background-color: #f0f0f0; border: 1px solid #ddd; }
+        #myStatusMessage { margin-top: 10px; padding: 8px; background-color: #f0f0f0; border: 1px solid #ddd; white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
     <h3 style="color: #007ACC;">Arduino Code Sender</h3>
+    
+    <label for="myBoardSelector">Select Target Board:</label>
+    <select id="myBoardSelector">
+        <option value="nano33ble">Nano 33 BLE Sense</option>
+        <option value="uno" selected>Arduino Uno</option>
+        <option value="nano">Arduino Nano</option>
+    </select>
+
     <textarea id="myArduinoCode" placeholder="void setup() { ... }"></textarea>
     
     <button onclick="mySendCodeToPlatformIO()">Compile & Flash</button>
@@ -21,45 +30,48 @@
     <script>
         // mySidePanel.js (Embedded)
 
-        // The URL for the local server bridge (this server must be running)
+        // Descriptive, camelCase variables for elements
+        const myCodeElement = document.getElementById("myArduinoCode");
+        const myBoardElement = document.getElementById("myBoardSelector");
+        const myStatusElement = document.getElementById("myStatusMessage");
+        
+        // The URL for the local server bridge (must match Node.js server)
         const myLocalServerUrl = "http://localhost:8080/compile-flash";
 
-        // Descriptive, camelCase variable for the textarea element
-        const myCodeElement = document.getElementById("myArduinoCode");
-        const myStatusElement = document.getElementById("myStatusMessage");
-
-        // The main function for sending the code
+        // The main function for sending the code (async/await preferred)
         async function mySendCodeToPlatformIO() {
             const myCode = myCodeElement.value;
+            const myBoard = myBoardElement.value;
             
-            // Basic validation
             if (!myCode.trim()) {
                 myUpdateStatus("Please enter Arduino code.", "red");
                 return;
             }
 
-            myUpdateStatus("Sending code to local PlatformIO bridge...", "orange");
+            myUpdateStatus(`Sending code for ${myBoard} to PlatformIO bridge...`, "orange");
 
             try {
-                // The Fetch API is used to send the data to the local bridge
+                // Send data to the local bridge server
                 const myResponse = await fetch(myLocalServerUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ code: myCode, board: 'uno' }) // 'uno' is an example board
+                    // Send both the code and the selected board ID
+                    body: JSON.stringify({ code: myCode, board: myBoard }) 
                 });
 
                 if (myResponse.ok) {
                     const myResult = await myResponse.json();
-                    myUpdateStatus("Success! " + (myResult.message || "PlatformIO command sent."), "green");
+                    myUpdateStatus(`Success! ${myResult.message}`, "green");
                 } else {
-                    const myErrorText = await myResponse.text();
-                    myUpdateStatus(`Error from bridge (${myResponse.status}): ${myErrorText}`, "red");
+                    const myResult = await myResponse.json();
+                    // Display debug info from the bridge's failure response
+                    myUpdateStatus(`Failure! ${myResult.message}\n\nDEBUG INFO:\n${myResult.error}`, "red");
                 }
             } catch (myError) {
-                // This catches connection errors (e.g., if the local server is not running)
-                myUpdateStatus(`Connection Error: Local server bridge at ${myLocalServerUrl} is not reachable.`, "red");
+                // Catches connection errors (e.g., server not running)
+                myUpdateStatus(`Connection Error: Local bridge server at ${myLocalServerUrl} is not running or not reachable.`, "red");
                 console.error("Fetch Error:", myError);
             }
         }
@@ -70,15 +82,17 @@
             myStatusElement.style.color = myColor;
         }
 
-        // Example code to pre-fill the textarea
+        // Example code pre-filled
         myCodeElement.value = `void setup() {
+  Serial.begin(9600);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 void loop() {
   digitalWrite(LED_BUILTIN, HIGH);
-  delay(1000);
+  delay(100);
   digitalWrite(LED_BUILTIN, LOW);
-  delay(1000);
+  delay(100);
+  Serial.println("Flashing...");
 }`;
         
     </script>
