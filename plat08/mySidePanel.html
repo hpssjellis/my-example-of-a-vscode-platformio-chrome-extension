@@ -1,0 +1,77 @@
+<!--
+===============================================================================
+INSTALLATION INSTRUCTIONS
+===============================================================================
+
+1. CHROME EXTENSION STRUCTURE:
+   your-extension/
+   ├── manifest.json
+   ├── mySidePanel.html (this file)
+   ├── mySidePanel.js
+   ├── myServiceWorker.js
+   └── icons/
+       ├── icon16.png
+       └── icon32.png
+
+2. THIS FILE:
+   Save as: mySidePanel.html
+
+3. MANIFEST.JSON REQUIREMENTS:
+   - Must include "sidePanel" permission
+   - Must include host_permissions for "http://localhost/*"
+   - Must reference this file in side_panel.default_path
+
+4. LOAD EXTENSION:
+   - Go to chrome://extensions
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select your extension folder
+
+5. USAGE:
+   - Click extension icon to open side panel
+   - Use tabs to switch between Arduino and TFLite features
+
+===============================================================================
+-->
+<div id="tflitePanel" class="tab-panel">
+        <h3>TensorFlow.js to TFLite Converter</h3>
+        
+        <p style="font-size: 12px; color: #666; margin-bottom: 15px;">
+            Convert TensorFlow.js models (including all weights shards) to TensorFlow Lite format for embedded devices.
+        </p>
+        
+        <label for="myModelName">Model Name:</label>
+        <input type="text" id="myModelName" placeholder="my_model" 
+               style="width: 95%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        
+        <label>Upload TensorFlow.js Model Files:</label>
+        <div class="file-upload-area" id="myFileUploadArea">
+            <p style="margin: 0; color: #007ACC; font-weight: bold;">
+                📁 Drop model.json AND all weights (.bin) files here
+            </p>
+            <p style="margin: 5px 0 0 0; font-size: 11px; color: #666;">
+                Supports model.json and all associated .bin files
+            </p>
+        </div>
+        <input type="file" id="myModelFileInput" accept=".json, .bin" multiple> 
+        
+        <div id="myModelInfo" class="model-info" style="display: none;">
+            <p><strong>Files Loaded:</strong> <span id="myModelFileName">-</span></p>
+            <p><strong>Total Size:</strong> <span id="myModelFileSize">-</span></p>
+        </div>
+        
+        <div class="button-group">
+            <button id="myConvertButton" disabled>Convert to TFLite</button>
+            <button id="myDownloadButton" class="secondary" style="display: none;">Download .tflite</button>
+            <button id="myClearTFLiteButton" class="secondary">Clear Output</button>
+        </div>
+        
+        <h4>Conversion Output</h4>
+        <div id="myTFLiteOutput">
+            <div class="log-entry log-info">Upload model.json and all .bin files to begin conversion.</div>
+        </div>
+    </div>
+
+    <script src="mySidePanel.js"></script>
+</body>
+</html>
