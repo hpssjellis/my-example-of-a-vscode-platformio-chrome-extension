@@ -4,7 +4,7 @@
   "description": "Node.js server to bridge a Chrome Extension to the PlatformIO CLI.",
   "main": "my-bridge-server.js",
   "scripts": {
-    "start": "node myBridgeServer.js",
+    "start": "node my-bridge-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
