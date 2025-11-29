@@ -1,0 +1,40 @@
+{
+  "name": "my-pio-bridge",
+  "version": "2.0.0",
+  "description": "Node.js server to bridge Chrome Extension to PlatformIO CLI and TensorFlow.js to TFLite conversion.",
+  "main": "my-bridge-server.js",
+  "scripts": {
+    "start": "node my-bridge-server.js",
+    "dev": "nodemon my-bridge-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "platformio",
+    "chrome",
+    "arduino",
+    "serial",
+    "tensorflow",
+    "tflite",
+    "machine-learning",
+    "embedded"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "serialport": "^12.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "homepage": "",
+  "type": "commonjs"
+}
