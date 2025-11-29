@@ -1,3 +1,14 @@
+
+/*
+
+
+mkdir my-pio-bridge
+cd my-pio-bridge
+npm init -y
+npm install express body-parser
+*/
+
+
 const myExpress = require('express');
 // body-parser is no longer needed/required
 const { exec: myExec } = require('child_process');
@@ -129,4 +140,5 @@ myApp.listen(myPort, () => {
     console.log(`✨ PlatformIO Bridge Server running at http://localhost:${myPort}`);
     console.log('Ensure PlatformIO Core (CLI) is installed and available in your PATH.');
     console.log('Press Ctrl+C to stop the server.');
+
 });
