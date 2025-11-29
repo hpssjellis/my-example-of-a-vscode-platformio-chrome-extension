@@ -95,7 +95,7 @@ function myInitialize() {
     
     // Initialize logging
     myAddLog("System initialized and ready", "info");
-    myAddTFLiteLog("Upload a model.json file to begin conversion", "info");
+    myAddTFLiteLog("Upload a ZIP file containing model.json and weight files", "info");
     
     // Start serial stream connection
     myConnectSerialStream();
@@ -120,6 +120,7 @@ function myGetDOMElements() {
     myModelInfo = document.getElementById("myModelInfo");
     myModelFileName = document.getElementById("myModelFileName");
     myModelFileSize = document.getElementById("myModelFileSize");
+    myModelFileCount = document.getElementById("myModelFileCount");
     myConvertButton = document.getElementById("myConvertButton");
     myDownloadButton = document.getElementById("myDownloadButton");
     myClearTFLiteButton = document.getElementById("myClearTFLiteButton");
@@ -407,6 +408,7 @@ function myHandleDrop(e) {
 function myHandleFileSelect(e) {
     const files = e.target.files;
     if (files.length > 0) {
+        console.log('[TFLITE] File selected:', files[0].name);
         myProcessModelFile(files[0]);
     }
 }
@@ -415,45 +417,121 @@ async function myProcessModelFile(file) {
     console.log('[TFLITE] Processing file:', file.name);
     myAddTFLiteLog(`Loading file: ${file.name}`, "info");
     
-    if (!file.name.endsWith('.json')) {
-        myAddTFLiteLog("ERROR: Please upload a model.json file", "error");
+    if (!file.name.endsWith('.zip')) {
+        myAddTFLiteLog("ERROR: Please upload a .zip file containing the model", "error");
+        console.error('[TFLITE] Wrong file type:', file.name);
         return;
     }
     
     try {
-        const myFileContent = await file.text();
-        const myModelTopology = JSON.parse(myFileContent);
+        myAddTFLiteLog("Extracting ZIP file...", "info");
         
-        console.log('[TFLITE] Model parsed successfully');
-        myAddTFLiteLog("Model.json loaded successfully", "success");
-        
-        // Look for weights file in the same directory or as base64
-        let myWeightData = null;
-        
-        // Check if weights are embedded in the JSON
-        if (myModelTopology.weightsManifest) {
-            myAddTFLiteLog("Note: Weights file required (not included in model.json)", "warning");
-            myAddTFLiteLog("For now, proceeding with model topology only", "info");
+        // Check if JSZip is loaded
+        if (typeof JSZip === 'undefined') {
+            myAddTFLiteLog("ERROR: JSZip library not loaded. Please refresh the page.", "error");
+            console.error('[TFLITE] JSZip library not found');
+            return;
         }
+        
+        // Read and extract ZIP file
+        const myZip = new JSZip();
+        const myZipData = await myZip.loadAsync(file);
+        
+        console.log('[TFLITE] ZIP extracted, files:', Object.keys(myZipData.files));
+        
+        // Find model.json
+        let myModelJsonFile = null;
+        let myModelJsonPath = null;
+        
+        for (const [path, zipEntry] of Object.entries(myZipData.files)) {
+            if (!zipEntry.dir && path.endsWith('model.json')) {
+                myModelJsonFile = zipEntry;
+                myModelJsonPath = path;
+                console.log('[TFLITE] Found model.json at:', path);
+                break;
+            }
+        }
+        
+        if (!myModelJsonFile) {
+            myAddTFLiteLog("ERROR: No model.json found in ZIP file", "error");
+            console.error('[TFLITE] model.json not found in ZIP');
+            return;
+        }
+        
+        myAddTFLiteLog(`Found model.json at: ${myModelJsonPath}`, "success");
+        
+        // Read model.json
+        const myModelJsonContent = await myModelJsonFile.async('text');
+        const myModelTopology = JSON.parse(myModelJsonContent);
+        
+        console.log('[TFLITE] Model.json parsed successfully');
+        
+        // Find all weight files
+        const myWeightFiles = {};
+        const myWeightFilenames = [];
+        
+        if (myModelTopology.weightsManifest) {
+            // Extract weight filenames from manifest
+            for (const manifest of myModelTopology.weightsManifest) {
+                for (const weightPath of manifest.paths) {
+                    myWeightFilenames.push(weightPath);
+                }
+            }
+            
+            myAddTFLiteLog(`Looking for ${myWeightFilenames.length} weight file(s)...`, "info");
+            console.log('[TFLITE] Weight files needed:', myWeightFilenames);
+            
+            // Find weight files in ZIP
+            for (const weightName of myWeightFilenames) {
+                let found = false;
+                
+                for (const [path, zipEntry] of Object.entries(myZipData.files)) {
+                    if (!zipEntry.dir && path.endsWith(weightName)) {
+                        const weightData = await zipEntry.async('base64');
+                        myWeightFiles[weightName] = weightData;
+                        myAddTFLiteLog(`✓ Found: ${weightName}`, "success");
+                        console.log('[TFLITE] Found weight file:', weightName);
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    myAddTFLiteLog(`✗ Missing: ${weightName}`, "error");
+                    console.warn('[TFLITE] Missing weight file:', weightName);
+                }
+            }
+        } else {
+            myAddTFLiteLog("No weight files specified in model.json", "info");
+            console.log('[TFLITE] No weightsManifest in model.json');
+        }
+        
+        const myFileCount = 1 + Object.keys(myWeightFiles).length;
         
         myLoadedModel = {
             modelTopology: myModelTopology,
-            weightData: myWeightData,
+            weightFiles: myWeightFiles,
             fileName: file.name
         };
         
         // Update UI
         myModelFileName.textContent = file.name;
         myModelFileSize.textContent = `${(file.size / 1024).toFixed(2)} KB`;
+        myModelFileCount.textContent = `${myFileCount} (model.json + ${Object.keys(myWeightFiles).length} weights)`;
         myModelInfo.style.display = 'block';
         myConvertButton.disabled = false;
         
-        myAddTFLiteLog("Model ready for conversion", "success");
-        myAddTFLiteLog(`Input shape: ${JSON.stringify(myModelTopology.config?.layers?.[0]?.config?.batch_input_shape || 'Unknown')}`, "info");
+        console.log('[TFLITE] Convert button enabled');
+        myAddTFLiteLog("Model package ready for conversion", "success");
+        
+        if (myModelTopology.config?.layers?.[0]?.config?.batch_input_shape) {
+            myAddTFLiteLog(`Input shape: ${JSON.stringify(myModelTopology.config.layers[0].config.batch_input_shape)}`, "info");
+        }
         
     } catch (error) {
-        console.error('[TFLITE] Error processing file:', error);
-        myAddTFLiteLog(`ERROR: Failed to parse model file - ${error.message}`, "error");
+        console.error('[TFLITE] Error processing ZIP file:', error);
+        myAddTFLiteLog(`ERROR: Failed to process ZIP file - ${error.message}`, "error");
+        myConvertButton.disabled = true;
     }
 }
 
