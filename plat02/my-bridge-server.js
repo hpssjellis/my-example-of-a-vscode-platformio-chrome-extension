@@ -1,19 +1,5 @@
-// myBridgeServer.js
-
-
-/*
-
-
-mkdir my-pio-bridge
-cd my-pio-bridge
-npm init -y
-npm install express body-parser
-*/
-
-
-
 const myExpress = require('express');
-const myBodyParser = require('body-parser');
+// body-parser is no longer needed/required
 const { exec: myExec } = require('child_process');
 const myFs = require('fs');
 const myPath = require('path');
@@ -25,7 +11,10 @@ const myProjectDir = myPath.join(__dirname, 'myPioProject');
 const mySourceFile = myPath.join(myProjectDir, 'src', 'main.cpp');
 
 // --- Configuration and Setup ---
-myApp.use(myBodyParser.json());
+
+// 🎯 REPLACED: myApp.use(myBodyParser.json());
+// Use built-in Express middleware to parse incoming JSON request bodies
+myApp.use(myExpress.json());
 
 // Set up CORS to allow the Chrome extension to connect
 myApp.use((myReq, myRes, myNext) => {
@@ -35,6 +24,8 @@ myApp.use((myReq, myRes, myNext) => {
     myRes.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     myNext();
 });
+
+// --- Helper Functions ---
 
 /**
  * Maps simple board names to PlatformIO's required settings.
@@ -76,11 +67,12 @@ framework = arduino
     console.log(`PlatformIO project configured for board: ${myBoardId} (${myConfig.board})`);
 }
 
-// --- Route Handlers (async/await preferred) ---
+// --- Route Handler ---
 
 // The main POST endpoint to receive and process the code
 myApp.post('/compile-flash', async (myReq, myRes) => {
     // Destructure payload, default board to 'uno' if not provided
+    // myReq.body is available here thanks to myApp.use(myExpress.json());
     const { code: myCode, board: myBoardName = 'uno' } = myReq.body; 
     
     if (!myCode) {

@@ -2,7 +2,7 @@
   "name": "my-pio-bridge",
   "version": "1.0.0",
   "description": "Node.js server to bridge a Chrome Extension to the PlatformIO CLI.",
-  "main": "myBridgeServer.js",
+  "main": "my-bridge-server.js",
   "scripts": {
     "start": "node myBridgeServer.js",
     "test": "echo \"Error: no test specified\" && exit 1"
