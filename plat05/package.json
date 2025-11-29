@@ -1,0 +1,23 @@
+{
+  "name": "my-pio-bridge",
+  "version": "1.0.0",
+  "description": "Node.js server to bridge a Chrome Extension to the PlatformIO CLI.",
+  "main": "my-bridge-server.js",
+  "scripts": {
+    "start": "node my-bridge-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "platformio",
+    "chrome",
+    "vscode",
+    "arduino",
+    "serial"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "serialport": "^12.0.0"
+  }
+}
