@@ -1,0 +1,340 @@
+<!--
+===============================================================================
+INSTALLATION INSTRUCTIONS
+===============================================================================
+
+1. CHROME EXTENSION STRUCTURE:
+   your-extension/
+   ├── manifest.json
+   ├── mySidePanel.html (this file)
+   ├── mySidePanel.js
+   ├── myServiceWorker.js
+   └── icons/
+       ├── icon16.png
+       └── icon32.png
+
+2. THIS FILE:
+   Save as: mySidePanel.html
+
+3. MANIFEST.JSON REQUIREMENTS:
+   - Must include "sidePanel" permission
+   - Must include host_permissions for "http://localhost/*"
+   - Must reference this file in side_panel.default_path
+
+4. LOAD EXTENSION:
+   - Go to chrome://extensions
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select your extension folder
+
+5. USAGE:
+   - Click extension icon to open side panel
+   - Use tabs to switch between Arduino and TFLite features
+
+===============================================================================
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PlatformIO & TFLite Tools</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            padding: 0;
+            margin: 0;
+        }
+        
+        /* Tab Navigation */
+        .tab-container {
+            display: flex;
+            background-color: #f0f0f0;
+            border-bottom: 2px solid #007ACC;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 12px 20px;
+            background-color: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            transition: background-color 0.3s;
+        }
+        
+        .tab-button:hover {
+            background-color: #d0d0d0;
+        }
+        
+        .tab-button.active {
+            background-color: #007ACC;
+            color: white;
+        }
+        
+        /* Tab Content Panels */
+        .tab-panel {
+            display: none;
+            padding: 15px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Common Styles */
+        h3 {
+            color: #007ACC;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #007ACC;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        select {
+            padding: 8px;
+            margin-bottom: 10px;
+            width: 98%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        textarea {
+            width: 95%;
+            height: 200px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #007ACC;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        
+        button:hover {
+            background-color: #005a9e;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        button.secondary {
+            background-color: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .button-group {
+            margin-bottom: 10px;
+        }
+        
+        /* Status Log */
+        #myStatusMessage {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px;
+            border-left: 3px solid #007ACC;
+        }
+        
+        .log-info { border-left-color: #007ACC; }
+        .log-success { border-left-color: green; }
+        .log-error { border-left-color: red; }
+        .log-warning { border-left-color: orange; }
+        
+        /* Serial Console */
+        #mySerialConsole {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #1e1e1e;
+            color: #00ff00;
+            border: 1px solid #444;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            height: 250px;
+            overflow-y: auto;
+        }
+        
+        .serial-line {
+            margin: 2px 0;
+        }
+        
+        /* TFLite Panel Specific */
+        .file-upload-area {
+            border: 2px dashed #007ACC;
+            border-radius: 4px;
+            padding: 20px;
+            text-align: center;
+            background-color: #f8f9fa;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .file-upload-area:hover {
+            background-color: #e9ecef;
+        }
+        
+        .file-upload-area.dragover {
+            background-color: #cfe2ff;
+            border-color: #0056b3;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .model-info {
+            background-color: #e7f3ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        
+        .model-info p {
+            margin: 5px 0;
+        }
+        
+        #myTFLiteOutput {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Tab Navigation -->
+    <div class="tab-container">
+        <button class="tab-button active" data-tab="arduino">Arduino Code</button>
+        <button class="tab-button" data-tab="tflite">TFLite Converter</button>
+    </div>
+
+    <!-- Arduino Tab Panel -->
+    <div id="arduinoPanel" class="tab-panel active">
+        <h3>Arduino Code Sender</h3>
+        
+        <label for="myBoardSelector">Select Target Board:</label>
+        <select id="myBoardSelector">
+            <option value="nano33ble">Nano 33 BLE Sense</option>
+            <option value="uno" selected>Arduino Uno</option>
+            <option value="nano">Arduino Nano</option>
+        </select>
+
+        <textarea id="myArduinoCode" placeholder="void setup() { ... }"></textarea>
+        
+        <div class="button-group">
+            <button id="myCompileButton">Compile & Flash</button>
+            <button id="myClearLogsButton" class="secondary">Clear Logs</button>
+            <button id="myClearSerialButton" class="secondary">Clear Serial</button>
+        </div>
+        
+        <h4>Status Log</h4>
+        <div id="myStatusMessage">
+            <div class="log-entry log-info">[READY] System initialized and ready.</div>
+        </div>
+
+        <h4>Serial Console</h4>
+        <div id="mySerialConsole">Waiting for serial data...</div>
+    </div>
+
+    <!-- TFLite Tab Panel -->
+    <div id="tflitePanel" class="tab-panel">
+        <h3>TensorFlow.js to TFLite Converter</h3>
+        
+        <p style="font-size: 12px; color: #666; margin-bottom: 15px;">
+            Convert TensorFlow.js models to TensorFlow Lite format for embedded devices.
+        </p>
+        
+        <label for="myModelName">Model Name:</label>
+        <input type="text" id="myModelName" placeholder="my_model" 
+               style="width: 95%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        
+        <label for="myModelFolderPath">Model Folder Path:</label>
+        <p style="font-size: 11px; color: #666; margin: 5px 0;">
+            Enter the full path to the folder containing model.json and weight files.
+        </p>
+        <input type="text" id="myModelFolderPath" 
+               placeholder="C:\Users\YourName\models\my_model  or  /home/user/models/my_model"
+               style="width: 95%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;">
+        
+        <p style="font-size: 11px; color: #666; margin: 5px 0 10px 0;">
+            <strong>Examples:</strong><br>
+            Windows: <code>C:\Users\YourName\Documents\my_model</code><br>
+            macOS: <code>/Users/yourname/Documents/my_model</code><br>
+            Linux: <code>/home/yourname/models/my_model</code>
+        </p>
+        
+        <div id="myModelInfo" class="model-info" style="display: none;">
+            <p><strong>Folder Path:</strong> <span id="myModelFolderDisplay">-</span></p>
+            <p><strong>Status:</strong> <span id="myModelValidationStatus">-</span></p>
+        </div>
+        
+        <div class="button-group">
+            <button id="myValidateButton">Validate Path</button>
+            <button id="myConvertButton" disabled>Convert to TFLite</button>
+            <button id="myDownloadButton" class="secondary" style="display: none;">Download .tflite</button>
+            <button id="myClearTFLiteButton" class="secondary">Clear Output</button>
+        </div>
+        
+        <h4>Conversion Output</h4>
+        <div id="myTFLiteOutput">
+            <div class="log-entry log-info">Enter the folder path and click 'Validate Path' to check the model.</div>
+        </div>
+    </div>
+
+    <script src="mySidePanel.js"></script>
+</body>
+</html>
